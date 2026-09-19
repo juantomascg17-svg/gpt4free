@@ -9,9 +9,17 @@ const {
     fetchLatestBaileysVersion,
 } = require("@whiskeysockets/baileys");
 
+// "g4f" (default, talks to a local g4f API server) or "anthropic" (official Claude API, needs ANTHROPIC_API_KEY)
+const BACKEND = process.env.BACKEND || "g4f";
+
 const G4F_API_URL = process.env.G4F_API_URL || "http://localhost:1337/v1/chat/completions";
 const G4F_MODEL = process.env.G4F_MODEL || "gpt-4o-mini";
 const G4F_API_KEY = process.env.G4F_API_KEY || "";
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
+const ANTHROPIC_MAX_TOKENS = parseInt(process.env.ANTHROPIC_MAX_TOKENS || "1024", 10);
+
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT || "You are a helpful assistant answering over WhatsApp. Keep replies short.";
 // Comma-separated list of phone numbers (with country code, no "+") allowed to talk to the bot.
 // Leave empty to accept messages from anyone who writes to this WhatsApp number.
@@ -42,6 +50,35 @@ async function askG4f(userText) {
     }
     const data = await response.json();
     return data.choices?.[0]?.message?.content?.trim() || "(empty response)";
+}
+
+async function askAnthropic(userText) {
+    if (!ANTHROPIC_API_KEY) {
+        throw new Error("ANTHROPIC_API_KEY is not set. Get one at https://console.anthropic.com/");
+    }
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+            model: ANTHROPIC_MODEL,
+            max_tokens: ANTHROPIC_MAX_TOKENS,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: "user", content: userText }],
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`Anthropic API returned ${response.status}: ${await response.text()}`);
+    }
+    const data = await response.json();
+    return data.content?.[0]?.text?.trim() || "(empty response)";
+}
+
+function askAI(userText) {
+    return BACKEND === "anthropic" ? askAnthropic(userText) : askG4f(userText);
 }
 
 function isAllowed(jid) {
@@ -104,7 +141,7 @@ async function startBot() {
 
             try {
                 await sock.sendPresenceUpdate("composing", jid);
-                const reply = await askG4f(text);
+                const reply = await askAI(text);
                 await sock.sendMessage(jid, { text: reply });
             } catch (err) {
                 console.error("Failed to answer message:", err);
