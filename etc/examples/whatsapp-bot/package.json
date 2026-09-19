@@ -1,0 +1,17 @@
+{
+  "name": "g4f-whatsapp-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WhatsApp bot that answers messages using the local g4f API, built on Baileys.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "pino": "^9.4.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
