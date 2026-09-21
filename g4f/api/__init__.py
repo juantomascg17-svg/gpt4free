@@ -77,6 +77,7 @@ from g4f import Provider
 from g4f.Provider import ProviderUtils
 
 from g4f.gui import get_gui_app
+from g4f.integration.whatsapp import create_whatsapp_router, has_whatsapp_config
 from .stubs import (
     ChatCompletionsConfig, ImageGenerationConfig,
     ProviderResponseModel, ModelResponseModel,
@@ -142,6 +143,9 @@ def create_app():
         for provider in AppConfig.ignored_providers:
             if provider in ProviderUtils.convert:
                 ProviderUtils.convert[provider].working = False
+
+    if has_whatsapp_config():
+        app.include_router(create_whatsapp_router())
 
     return app
 
